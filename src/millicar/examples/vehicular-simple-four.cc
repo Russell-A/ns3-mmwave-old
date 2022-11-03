@@ -29,7 +29,44 @@
 #include "ns3/internet-module.h"
 #include "ns3/core-module.h"
 
+
+#include "ns3/config.h"
+#include "ns3/constant-position-mobility-model.h"
+#include "ns3/core-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/mmwave-vehicular-helper.h"
+#include "ns3/mmwave-vehicular-net-device.h"
+#include "ns3/mmwave-vehicular-propagation-loss-model.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+#include "ns3/system-wall-clock-ms.h"
+#include "ns3/traci-applications-module.h"
+#include "ns3/traci-module.h"
+#include <fstream>
+#include <iostream>
+#include <sys/stat.h>
+#include "ns3/mmwave-vehicular-net-device.h"
+#include "ns3/mmwave-vehicular-helper.h"
+#include "ns3/mobility-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/core-module.h"
+#include <fstream>
+#include "ns3/applications-module.h"
+#include "ns3/mmwave-sidelink-spectrum-phy.h"
+#include "ns3/mmwave-vehicular-net-device.h"
+#include "ns3/mmwave-vehicular-helper.h"
+#include "ns3/constant-position-mobility-model.h"
+#include "ns3/mobility-module.h"
+#include "ns3/isotropic-antenna-model.h"
+#include "ns3/spectrum-helper.h"
+#include "ns3/mmwave-spectrum-value-helper.h"
+#include "ns3/applications-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/core-module.h"
+#include "ns3/csma-module.h"
+
 NS_LOG_COMPONENT_DEFINE ("VehicularSimpleFour");
+
 
 using namespace ns3;
 using namespace millicar;
@@ -70,6 +107,21 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::MmWaveVehicularPropagationLossModel::ChannelCondition", StringValue ("l"));
   Config::SetDefault ("ns3::MmWaveVehicularHelper::Bandwidth", DoubleValue (bandwidth));
   Config::SetDefault ("ns3::MmWaveVehicularHelper::SchedulingPatternOption", EnumValue(2)); // use 2 for SchedulingPatternOption=OPTIMIZED, 1 or SchedulingPatternOption=DEFAULT
+
+   // SUMO Configuration
+  Ptr<TraciClient> sumoClient = CreateObject<TraciClient>();
+  sumoClient->SetAttribute ("SumoConfigPath", StringValue ("examples/sumo-millicar/circle-simple/circle.sumo.cfg"));
+  sumoClient->SetAttribute ("SumoBinaryPath", StringValue (""));    // use system installation of sumo
+  sumoClient->SetAttribute ("SynchInterval", TimeValue (Seconds (0.1)));
+  sumoClient->SetAttribute ("StartTime", TimeValue (Seconds (0.0)));
+  sumoClient->SetAttribute ("SumoGUI", BooleanValue (true)); //10/17 change
+  sumoClient->SetAttribute ("SumoPort", UintegerValue (3400));
+  sumoClient->SetAttribute ("PenetrationRate", DoubleValue (1.0));  // portion of vehicles equipped with wifi
+  sumoClient->SetAttribute ("SumoLogFile", BooleanValue (true));
+  sumoClient->SetAttribute ("SumoStepLog", BooleanValue (false));
+  sumoClient->SetAttribute ("SumoSeed", IntegerValue (10));
+  sumoClient->SetAttribute ("SumoAdditionalCmdOptions", StringValue ("--verbose true"));
+  sumoClient->SetAttribute ("SumoWaitForSocket", TimeValue (Seconds (1.0)));
 
   // create the nodes
   NodeContainer group;
@@ -152,7 +204,7 @@ int main (int argc, char *argv[])
   client.SetAttribute ("PacketSize", UintegerValue (packetSize));
   ApplicationContainer clientApps = client.Install (group.Get (0));
   clientApps.Start (Seconds(1.0));
-  clientApps.Stop (endTime);
+  clientApps.Stop (Seconds(100.0));
 
   UdpClientHelper client2 (group.Get (2)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), port_2);
   client2.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
@@ -160,9 +212,55 @@ int main (int argc, char *argv[])
   client2.SetAttribute ("PacketSize", UintegerValue (packetSize));
   ApplicationContainer clientApps2 = client2.Install (group.Get (1));
   clientApps2.Start (Seconds(1.0));
-  clientApps2.Stop (endTime);
+  clientApps2.Stop (Seconds(100.0));
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+  uint32_t nodeCounter = 0;
+  VehicleSpeedControlHelper vehicleSpeedControlHelper(9);
+  vehicleSpeedControlHelper.SetAttribute("Client", (PointerValue)sumoClient);
+
+  // a callback function to setup the nodes
+  std::function<Ptr<Node>()> setupNewWifiNode = [&]() -> Ptr<Node> {
+    if (nodeCounter >= group.GetN())
+      NS_FATAL_ERROR("Node Container empty!: " << nodeCounter
+                                               << " nodes created.");
+
+    // don't create and install the protocol stack of the node at simulation
+    // time -> take from "node pool"
+    Ptr<Node> includedNode = group.Get(nodeCounter);
+    ++nodeCounter; // increment counter for next node
+
+    // Install Application
+    ApplicationContainer vehicleSpeedControlApps =
+        vehicleSpeedControlHelper.Install(includedNode);
+    vehicleSpeedControlApps.Start(Seconds(0.0));
+    vehicleSpeedControlApps.Stop(Seconds(18.0));
+
+    return includedNode;
+  };
+
+  // a callback function for node shutdown
+  std::function<void(Ptr<Node>)> shutdownWifiNode = [](Ptr<Node> exNode) {
+    // stop all applications
+    Ptr<VehicleSpeedControl> vehicleSpeedControl =
+        exNode->GetApplication(0)->GetObject<VehicleSpeedControl>();
+    if (vehicleSpeedControl)
+      vehicleSpeedControl->StopApplicationNow();
+
+    // set position outside communication range in SUMO
+    Ptr<ConstantPositionMobilityModel> mob =
+        exNode->GetObject<ConstantPositionMobilityModel>();
+    mob->SetPosition(
+        Vector(-100.0 + (rand() % 25), 320.0 + (rand() % 25), 250.0));
+  };
+
+  // start traci client
+  sumoClient->SumoSetup(setupNewWifiNode, shutdownWifiNode);
+
+  AnimationInterface anim ("examples/sumo-millicar/circle-simple/ns3-sumo-coupling.xml"); // Mandatory
+
+
 
   Simulator::Stop (Seconds(18.0));
   Simulator::Run ();

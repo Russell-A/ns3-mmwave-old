@@ -159,7 +159,13 @@ MmWaveVehicularPropagationLossModel::GetLoss (Ptr<MobilityModel> deviceA, Ptr<Mo
     }
 
   channelConditionMap_t::const_iterator it;
-  it = m_channelConditionMap.find (std::make_pair (deviceA, deviceB));
+  it = m_channelConditionMap.find (std::make_pair (deviceA, deviceB)); 
+  // #include <iostream> //FOR_DEBUG
+  // std::cout << "distance2D"<< "\t" << distance2D << std::endl;
+  // std::cout << "distance3D"<< "\t" << distance3D << std::endl;
+  
+  
+
   if (it == m_channelConditionMap.end ())
     {
       channelCondition condition;

@@ -25,7 +25,7 @@
 
 
 /* Reporting string for enabled options */
-#define HAVE_ENABLED "Linux-4.15.0-43-generic x86_64 GNU 7.3.0 Release"
+#define HAVE_ENABLED "Darwin Kernel Version 21.5.0 arm64 "
 
 /* defined if ffmpeg is available */
 /* #undef HAVE_FFMPEG */

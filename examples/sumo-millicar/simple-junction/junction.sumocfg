@@ -1,0 +1,4 @@
+<configuration>
+    <net-file value="/Users/Res_proj/Documents/Research/ns3-mmwave-old/examples/sumo-millicar/simple-junction/junction.net.xml"/>
+    <route-files value="/Users/Res_proj/Documents/Research/ns3-mmwave-old/examples/sumo-millicar/simple-junction/junction.rou.xml"/>
+</configuration>

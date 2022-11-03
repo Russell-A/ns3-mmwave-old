@@ -1,0 +1,5 @@
+set xrange [-200:200]; set yrange [-200:200]
+set label "1" at -30,-2.5 left font "Helvetica,8" textcolor rgb "black" front point pt 7 ps 0.3 lc rgb "black" offset 0,0
+set label "2" at -20,-2.5 left font "Helvetica,8" textcolor rgb "black" front point pt 7 ps 0.3 lc rgb "black" offset 0,0
+set label "3" at 20,2.5 left font "Helvetica,8" textcolor rgb "black" front point pt 7 ps 0.3 lc rgb "black" offset 0,0
+set label "4" at 30,2.5 left font "Helvetica,8" textcolor rgb "black" front point pt 7 ps 0.3 lc rgb "black" offset 0,0
