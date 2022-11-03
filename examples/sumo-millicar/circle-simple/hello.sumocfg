@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2022-10-23 15:46:33 by Eclipse SUMO GUI Version v1_14_1+1789-6cfa3a18e2c
+-->
+
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="../../../../examples/sumo-millicar/simple_rect/hello.net.xml"/>
+        <route-files value="../../../../examples/sumo-millicar/simple_rect/hello.rou.xml"/>
+    </input>
+
+</configuration>

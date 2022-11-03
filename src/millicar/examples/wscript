@@ -11,8 +11,11 @@ def build(bld):
     obj = bld.create_ns3_program('vehicular-simple-three', ['millicar','core', 'propagation', 'spectrum', 'mmwave'])
     obj.source = 'vehicular-simple-three.cc'
 
-    obj = bld.create_ns3_program('vehicular-simple-four', ['millicar','core', 'propagation', 'spectrum', 'mmwave'])
+    obj = bld.create_ns3_program('vehicular-simple-four',  ['traci-applications', 'wave', 'netanim', 'traci',
+    'millicar','core', 'propagation', 'spectrum', 'mmwave'])
     obj.source = 'vehicular-simple-four.cc'
+
+
 
     obj = bld.create_ns3_program('mmwave-vehicular-link-adaptation-example', ['millicar'])
     obj.source = 'mmwave-vehicular-link-adaptation-example.cc'
