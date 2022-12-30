@@ -22,17 +22,13 @@
 #include "ns3/spectrum-helper.h"
 #include "ns3/mmwave-spectrum-value-helper.h"
 
-#include <algorithm>
-#include <random>
-
-
-
 
 
 using namespace ns3;
 using namespace millicar;
 
-NodeContainer n; // create a pool to contain the vehicles. 
+// create a pool to contain the vehicles. 
+std::vector<NodeContainer> nodecontainer1(100);
 Ptr<TraciClient> sumoClient = CreateObject<TraciClient>();
 std::map<std::string, int> VehDur;
 std::map<int, std::string> NodetoVehID = {};
@@ -200,10 +196,12 @@ static void ChangeFilltoBLUE(std::vector<UdpEchoClientHelper> * client, Applicat
 
 static void Tx ( uint32_t node_counter, Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p)
 {   
-    
+        std:: cout << "enter tx" << std::endl;
+
     *stream->GetStream () << "Tx\t" << Simulator::Now ().GetSeconds () << "\t" << node_counter << "\t" << p->GetSize ()<< '\t';
     p->CopyData(&(*stream->GetStream()), p->GetSize());
     *stream->GetStream ()<< std::endl;
+    std:: cout << "leave tx" << std::endl;
 }
 
 static void Rx (uint32_t node_counter, Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p)
@@ -213,13 +211,13 @@ static void Rx (uint32_t node_counter, Ptr<OutputStreamWrapper> stream, Ptr<cons
     *stream->GetStream ()<< std::endl;
 
     //先临时输出packet_number, 再读入
-    std::ofstream ofs("examples/test/Rx_temp.txt");
+    std::ofstream ofs("examples/testall/temp.txt");
     p->CopyData(&ofs, p->GetSize());
     ofs.close();
 
   //读入    
     
-    std::ifstream ifs("examples/test/Rx_temp.txt");
+    std::ifstream ifs("examples/testall/temp.txt");
     std::string packet_readin((std::istreambuf_iterator<char>(ifs)),
                  std::istreambuf_iterator<char>());
 
@@ -248,36 +246,19 @@ static void Rx (uint32_t node_counter, Ptr<OutputStreamWrapper> stream, Ptr<cons
     if (NodetoVehID.find(node_counter) == NodetoVehID.end()){
         return;
     }
-    std::string VehId = NodetoVehID[node_counter];
-    if (VehId.substr(0,2) != "pf"){
-        if (packet_readin.substr(0, 3) == "RED"){
-            sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], Red);      
-        }
-        else if (packet_readin.substr(0, 6) == "YELLOW"){
-            sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], Yellow);      
-        }
-        else if (packet_readin.substr(0, 5) == "GREEN"){
-            sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], GREEN);                  
-        }
-        else if (packet_readin.substr(0, 4) == "BLUE"){
-            sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], BLUE);      
-        }
-    }
-    else if (VehId.substr(0,2) == "pf"){
-        if (packet_readin.substr(0, 3) == "RED"){
-            sumoClient->TraCIAPI::person.setColor(NodetoVehID[node_counter], Red);      
-        }
-        else if (packet_readin.substr(0, 6) == "YELLOW"){
-            sumoClient->TraCIAPI::person.setColor(NodetoVehID[node_counter], Yellow);      
-        }
-        else if (packet_readin.substr(0, 5) == "GREEN"){
-            sumoClient->TraCIAPI::person.setColor(NodetoVehID[node_counter], GREEN);                  
-        }
-        else if (packet_readin.substr(0, 4) == "BLUE"){
-            sumoClient->TraCIAPI::person.setColor(NodetoVehID[node_counter], BLUE);      
-        }
-    }
     
+    if (packet_readin.substr(0, 3) == "RED"){
+      sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], Red);      
+    }
+    else if (packet_readin.substr(0, 6) == "YELLOW"){
+      sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], Yellow);      
+    }
+    else if (packet_readin.substr(0, 5) == "GREEN"){
+      sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], GREEN);      
+    }
+    else if (packet_readin.substr(0, 4) == "BLUE"){
+      sumoClient->TraCIAPI::vehicle.setColor(NodetoVehID[node_counter], BLUE);      
+    }
 }
 
 
@@ -310,11 +291,7 @@ void simulationStep(int step){
         std::cout << "enter Step" << std::endl;
 
         sumoClient->simulationStep();
-        std::vector<std::string> carIDlist =sumoClient-> TraCIAPI::vehicle.getIDList();
-        std::vector<std::string> personIDlist = sumoClient-> TraCIAPI::person.getIDList();
-        std::vector<std::string> IDlist; IDlist.insert(IDlist.end(), carIDlist.begin(), carIDlist.end()); IDlist.insert(IDlist.end(), personIDlist.begin(), personIDlist.end());
-        auto rng = std::default_random_engine {};
-        std::shuffle(std::begin(IDlist), std::end(IDlist), rng);
+        std::vector<std::string> IDlist = sumoClient-> TraCIAPI::vehicle.getIDList();
         //update VehDur
         for(auto item = IDlist.begin(); item != IDlist.end(); item++){
             std::string s1 = *item;
@@ -374,14 +351,8 @@ void simulationStep(int step){
         for (std::map<int, std::string>::iterator iter = NodetoVehID.begin(); iter != NodetoVehID.end(); iter++){
             int node = iter->first;
             const std::string VehId= iter->second;
-            if (VehId.substr(0,2) == "pf"){
-                libsumo::TraCIPosition position = sumoClient->TraCIAPI::person.getPosition(VehId);
-                n.Get(node)->GetObject<MobilityModel>()->SetPosition (Vector (position.x, position.y, position.z));
-            }
-            else{
-                libsumo::TraCIPosition position = sumoClient->TraCIAPI::vehicle.getPosition(VehId);
-                n.Get(node)->GetObject<MobilityModel>()->SetPosition (Vector (position.x, position.y, position.z));
-            }
+            libsumo::TraCIPosition position = sumoClient->TraCIAPI::vehicle.getPosition(VehId);
+            // n.Get(node)->GetObject<MobilityModel>()->SetPosition (Vector (position.x, position.y, position.z));
         }
 
     
@@ -416,132 +387,154 @@ int main()
 
 
     // create nodepool, large enough to hold all the simulated car
-    n.Create(8);
+    int i = 0;
+    for (NodeContainer &n : nodecontainer1){
+        n.Create(8);
 
-    // create the mobility nodes
-    MobilityHelper mobility;
-    mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-    mobility.Install (n);
+            // create the mobility nodes
+        MobilityHelper mobility;
+        mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+        mobility.Install (n);
 
-    // initinalize all the postion, the modules cannot be initialize at the same point otherwise the propagation model goes wrong
-    // the infracture is set at (320.80, 212.24 0)
-    for (uint32_t i = 0; i < n.GetN(); i++)  n.Get(i)->GetObject<MobilityModel>()->SetPosition (Vector (0,0,0));
-    n.Get(0)->GetObject<MobilityModel>()->SetPosition (Vector (230,198,0));
+        // initinalize all the postion, the modules cannot be initialize at the same point otherwise the propagation model goes wrong
+        // the infracture is set at (230,198,0)
+        for (uint32_t i = 0; i < n.GetN(); i++)  n.Get(i)->GetObject<MobilityModel>()->SetPosition (Vector (0,0,0));
+        n.Get(0)->GetObject<MobilityModel>()->SetPosition (Vector (230,198,0));
 
+            // Create and configure the helper
+        Ptr<MmWaveVehicularHelper> helper = CreateObject<MmWaveVehicularHelper>(); 
+        helper->SetPropagationLossModelType("ns3::MmWaveVehicularPropagationLossModel");
+        helper->SetSpectrumPropagationLossModelType("ns3::MmWaveVehicularSpectrumPropagationLossModel");
+        helper->SetNumerology(3);   // 好像最大是3 车辆最大是2**3
+        NetDeviceContainer devs = helper->InstallMmWaveVehicularNetDevices(n);
 
+         InternetStackHelper internet;
+        internet.Install(n);
 
-    // Create and configure the helper
-    Ptr<MmWaveVehicularHelper> helper = CreateObject<MmWaveVehicularHelper>(); 
-    helper->SetPropagationLossModelType("ns3::MmWaveVehicularPropagationLossModel");
-    helper->SetSpectrumPropagationLossModelType("ns3::MmWaveVehicularSpectrumPropagationLossModel");
-    helper->SetNumerology(3);   // 好像最大是3 车辆最大是2**3
-    NetDeviceContainer devs = helper->InstallMmWaveVehicularNetDevices(n);
+        Ipv4AddressHelper ipv4;
+        std::string prefix = "10.1.";
+        std::string suffix = ".0";
+        const char * ip = (prefix+std::to_string(i)+suffix).c_str();
+        ipv4.SetBase(ip , "255.255.255.0");
+        i++;
+        Ipv4InterfaceContainer i = ipv4.Assign(devs);
+        helper->PairDevices(devs);
 
-    InternetStackHelper internet;
-    internet.Install(n);
+         uint32_t maxPacketCount = 800000;
+        uint32_t packetSize = 512;
+        Time interPacketInterval =  MilliSeconds(40);
 
-    Ipv4AddressHelper ipv4;
-    ipv4.SetBase("10.1.0.0", "255.255.255.0");
-    Ipv4InterfaceContainer i = ipv4.Assign(devs);
-    helper->PairDevices(devs);
+        // create server for each car (7 in total)
+        #pragma region
+        UdpEchoServerHelper server1 (4001);
+        ApplicationContainer apps = server1.Install (n.Get(1));
 
-    uint32_t maxPacketCount = 800000;
-    uint32_t packetSize = 512;
-    Time interPacketInterval =  MilliSeconds(40);
+        UdpEchoServerHelper server2 (4002);
+        apps.Add( server2.Install (n.Get(2)) );
 
-    // create server for each car (7 in total)
-    #pragma region
-    UdpEchoServerHelper server1 (4001);
-    ApplicationContainer apps = server1.Install (n.Get(1));
+        UdpEchoServerHelper server3 (4003);
+        apps.Add( server3.Install (n.Get(3)) );
 
-    UdpEchoServerHelper server2 (4002);
-    apps.Add( server2.Install (n.Get(2)) );
+        UdpEchoServerHelper server4 (4004);
+        apps.Add( server4.Install (n.Get(4)) );
 
-    UdpEchoServerHelper server3 (4003);
-    apps.Add( server3.Install (n.Get(3)) );
+        UdpEchoServerHelper server5 (4005);
+        apps.Add( server5.Install (n.Get(5)) );
 
-    UdpEchoServerHelper server4 (4004);
-    apps.Add( server4.Install (n.Get(4)) );
+        UdpEchoServerHelper server6 (4006);
+        apps.Add( server6.Install (n.Get(6)) );
 
-    UdpEchoServerHelper server5 (4005);
-    apps.Add( server5.Install (n.Get(5)) );
+        UdpEchoServerHelper server7 (4007);
+        apps.Add( server7.Install (n.Get(7)) );
 
-    UdpEchoServerHelper server6 (4006);
-    apps.Add( server6.Install (n.Get(6)) );
+            // create client for the infrasture
+        UdpEchoClientHelper client_0_1 (n.Get (1)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4001);
+        client_0_1.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_1.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_1.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        ApplicationContainer clientApps = client_0_1.Install (n.Get (1));
 
-    UdpEchoServerHelper server7 (4007);
-    apps.Add( server7.Install (n.Get(7)) );
+        UdpEchoClientHelper client_0_2 (n.Get (2)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4002);
+        client_0_2.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_2.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_2.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_2.Install (n.Get (2)));
 
-        // create client for the infrasture
-    UdpEchoClientHelper client_0_1 (n.Get (1)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4001);
-    client_0_1.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_1.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_1.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    ApplicationContainer clientApps = client_0_1.Install (n.Get (1));
+        UdpEchoClientHelper client_0_3 (n.Get (3)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4003);
+        client_0_3.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_3.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_3.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_3.Install (n.Get (3)));
 
-    UdpEchoClientHelper client_0_2 (n.Get (2)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4002);
-    client_0_2.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_2.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_2.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_2.Install (n.Get (2)));
+        UdpEchoClientHelper client_0_4 (n.Get (4)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4004);
+        client_0_4.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_4.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_4.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_4.Install (n.Get (4)));
 
-    UdpEchoClientHelper client_0_3 (n.Get (3)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4003);
-    client_0_3.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_3.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_3.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_3.Install (n.Get (3)));
+        UdpEchoClientHelper client_0_5 (n.Get (5)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4005);
+        client_0_5.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_5.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_5.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_5.Install (n.Get (5)));
 
-    UdpEchoClientHelper client_0_4 (n.Get (4)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4004);
-    client_0_4.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_4.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_4.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_4.Install (n.Get (4)));
+        UdpEchoClientHelper client_0_6 (n.Get (6)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4006);
+        client_0_6.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_6.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_6.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_6.Install (n.Get (6)));
 
-    UdpEchoClientHelper client_0_5 (n.Get (5)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4005);
-    client_0_5.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_5.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_5.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_5.Install (n.Get (5)));
+        UdpEchoClientHelper client_0_7 (n.Get (7)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4007);
+        client_0_7.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
+        client_0_7.SetAttribute ("Interval", TimeValue (interPacketInterval));
+        client_0_7.SetAttribute ("PacketSize", UintegerValue (packetSize));
+        clientApps.Add(client_0_7.Install (n.Get (7)));
+        #pragma endregion
 
-    UdpEchoClientHelper client_0_6 (n.Get (6)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4006);
-    client_0_6.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_6.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_6.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_6.Install (n.Get (6)));
+        clientApps.Start (Seconds(0));
+        clientApps.Stop (Seconds(simulationtime));
+        //in this example, client index is car index - 1.
 
-    UdpEchoClientHelper client_0_7 (n.Get (7)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4007);
-    client_0_7.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-    client_0_7.SetAttribute ("Interval", TimeValue (interPacketInterval));
-    client_0_7.SetAttribute ("PacketSize", UintegerValue (packetSize));
-    clientApps.Add(client_0_7.Install (n.Get (7)));
-    #pragma endregion
+        //set the initial fill
+        client_0_1.SetFill(clientApps.Get(0), "YELLOW");
+        client_0_2.SetFill(clientApps.Get(1), "YELLOW");
+        client_0_3.SetFill(clientApps.Get(2), "YELLOW");
+        client_0_4.SetFill(clientApps.Get(3), "YELLOW");
+        client_0_5.SetFill(clientApps.Get(4), "YELLOW");
+        client_0_6.SetFill(clientApps.Get(5), "YELLOW");
+        client_0_7.SetFill(clientApps.Get(6), "YELLOW");
 
-    clientApps.Start (Seconds(0));
-    clientApps.Stop (Seconds(simulationtime));
-    //in this example, client index is car index - 1.
+            // help to output log of v2i communication 
+        AsciiTraceHelper asciiTraceHelper;
+        Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("examples/testall/communation-stream.txt");
 
-    //set the initial fill
-    client_0_1.SetFill(clientApps.Get(0), "YELLOW");
-    client_0_2.SetFill(clientApps.Get(1), "YELLOW");
-    client_0_3.SetFill(clientApps.Get(2), "YELLOW");
-    client_0_4.SetFill(clientApps.Get(3), "YELLOW");
-    client_0_5.SetFill(clientApps.Get(4), "YELLOW");
-    client_0_6.SetFill(clientApps.Get(5), "YELLOW");
-    client_0_7.SetFill(clientApps.Get(6), "YELLOW");
+        std::cout << "error1" << std::endl;
+        std::vector<UdpEchoClientHelper> client_vector = {client_0_1, client_0_2, client_0_3, client_0_4, client_0_5, client_0_6, client_0_7};
+        for (uint32_t i = 0; i < 7; i++){
+            clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&Tx , i+1,stream));
+            clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoRED, & client_vector, & clientApps, i ));
+            clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoYELLOW, & client_vector, & clientApps, i ));
+            clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoBLUE, & client_vector, & clientApps, i ));
+            apps.Get(i)->TraceConnectWithoutContext ("Rx", MakeBoundCallback (&Rx, i+1, stream));
+        }
 
+        std::cout << "error2" << std::endl;
 
-    // help to output log of v2i communication 
-    AsciiTraceHelper asciiTraceHelper;
-    Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream ("examples/test/communation-stream.txt");
-
-    std::vector<UdpEchoClientHelper> client_vector = {client_0_1, client_0_2, client_0_3, client_0_4, client_0_5, client_0_6, client_0_7};
-    for (uint32_t i = 0; i < 7; i++){
-        clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&Tx , i+1,stream));
-        clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoRED, & client_vector, & clientApps, i ));
-        clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoYELLOW, & client_vector, & clientApps, i ));
-        clientApps.Get(i)->TraceConnectWithoutContext ("Tx", MakeBoundCallback (&ChangeFilltoBLUE, & client_vector, & clientApps, i ));
-        apps.Get(i)->TraceConnectWithoutContext ("Rx", MakeBoundCallback (&Rx, i+1, stream));
     }
+
+
+
+
+
+
+
+
+
+   
+
+   
+
+
 
     sumoClient -> connect("localhost", 3400);
     sumoClient -> setOrder(2);
