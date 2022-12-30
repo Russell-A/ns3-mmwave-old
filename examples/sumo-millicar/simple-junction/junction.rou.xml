@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2022-11-01 17:11:45 by Eclipse SUMO netedit Version v1_14_1+1789-6cfa3a18e2c
+<!-- generated on 2022-11-08 18:37:11 by Eclipse SUMO netedit Version v1_14_1+1789-6cfa3a18e2c
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
@@ -8,12 +8,13 @@
     <vType id="t_constant_speed" minGap="0.00" maxSpeed="3.00" guiShape="passenger/van" color="yellow" maxSpeedLat="10.00" minGapLat="0.00" accel="2" decel="2" emergencyDecel="10" apparentDecel="10"/>
     <vType id="type_very_fast_car" minGap="0.00" maxSpeed="50.00" guiShape="passenger/van" color="red" maxSpeedLat="50.00" minGapLat="0.00" accel="5" decel="5" emergencyDecel="10" apparentDecel="10"/>
     <!-- Vehicles, persons and containers (sorted by depart) -->
+    <trip id="t_1" type="t_constant_speed" depart="0.00" from="-E2" to="E0"/>
+    <trip id="t_2" type="t_constant_speed" depart="0.00" from="-E1" to="E2"/>
     <person id="p_0" depart="0.00">
         <personTrip from="-E0" to="E3" lines="ANY"/>
     </person>
     <person id="p_1" depart="0.00">
         <personTrip from="-E0" to="E3" lines="ANY"/>
     </person>
-    <trip id="t_1" type="t_constant_speed" depart="2.00" departSpeed="2.00" from="-E0" to="E1"/>
-    <trip id="t_0" type="type_very_fast_car" depart="5.00" departSpeed="20" from="-E0" to="E1"/>
+    <trip id="t_0" type="type_very_fast_car" depart="5.00" departSpeed="20.00" from="-E0" to="E1"/>
 </routes>
