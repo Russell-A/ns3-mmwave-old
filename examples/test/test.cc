@@ -36,7 +36,7 @@ NodeContainer n; // create a pool to contain the vehicles.
 Ptr<TraciClient> sumoClient = CreateObject<TraciClient>();
 std::map<std::string, int> VehDur;
 std::map<int, std::string> NodetoVehID = {};
-std::vector<std::string> mapped_IDlist = {};  //最多只能有7个元素
+std::vector<std::string> mapped_IDlist = {};  //7 vehicles at most
 
 
 static void ChangeFilltoRED(std::vector<UdpEchoClientHelper> * client, ApplicationContainer * clientApps, uint32_t index, Ptr<const Packet> p)
@@ -212,18 +212,17 @@ static void Rx (uint32_t node_counter, Ptr<OutputStreamWrapper> stream, Ptr<cons
     p->CopyData(&(*stream->GetStream()), p->GetSize());
     *stream->GetStream ()<< std::endl;
 
-    //先临时输出packet_number, 再读入
+    //Output the packet to a local temperory file
     std::ofstream ofs("examples/test/Rx_temp.txt");
     p->CopyData(&ofs, p->GetSize());
     ofs.close();
 
-  //读入    
-    
+    //Read in the packet from the file    
     std::ifstream ifs("examples/test/Rx_temp.txt");
     std::string packet_readin((std::istreambuf_iterator<char>(ifs)),
                  std::istreambuf_iterator<char>());
 
-
+    //Set Veh Color
     libsumo::TraCIColor Red;
     Red.r = 255;
     Red.g = 0;
@@ -447,7 +446,7 @@ int main()
 
     uint32_t maxPacketCount = 800000;
     uint32_t packetSize = 512;
-    Time interPacketInterval =  MilliSeconds(40);
+    Time interPacketInterval =  Seconds(0.1);
 
     // create server for each car (7 in total)
     #pragma region
@@ -472,7 +471,7 @@ int main()
     UdpEchoServerHelper server7 (4007);
     apps.Add( server7.Install (n.Get(7)) );
 
-        // create client for the infrasture
+    // create client for the vehicles
     UdpEchoClientHelper client_0_1 (n.Get (1)->GetObject<Ipv4> ()->GetAddress (1, 0).GetLocal (), 4001);
     client_0_1.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
     client_0_1.SetAttribute ("Interval", TimeValue (interPacketInterval));
